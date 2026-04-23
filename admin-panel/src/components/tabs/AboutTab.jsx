@@ -1,9 +1,23 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ConfirmModal from '../ConfirmModal'
+import Spinner from '../Spinner'
 import { documents as initialDocs } from '../../data/mockData'
 
 export default function AboutTab({ onToast }) {
-  const [docs, setDocs] = useState(initialDocs)
+  // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=get_documents') ───
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [docs, setDocs] = useState([])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDocs(initialDocs)
+      setLoading(false)
+    }, 500) // заменить на реальный fetch
+    return () => clearTimeout(t)
+  }, [])
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [modal, setModal] = useState(false)
   const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState({ name: '', filename: '' })
@@ -29,17 +43,28 @@ export default function AboutTab({ onToast }) {
   function handleAdd() {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    setDocs(prev => [...prev, { id: Date.now(), name: form.name.trim(), filename: form.filename }])
-    setModal(false)
-    setForm({ name: '', filename: '' })
-    setErrors({})
-    onToast('Документ добавлен')
+
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=upload_document') ───
+    setSaving(true)
+    setTimeout(() => {
+      setDocs(prev => [...prev, { id: Date.now(), name: form.name.trim(), filename: form.filename }])
+      setModal(false)
+      setForm({ name: '', filename: '' })
+      setErrors({})
+      onToast('Документ добавлен')
+      setSaving(false)
+    }, 400) // заменить на реальный fetch
+    // ──────────────────────────────────────────────────────────────────────────
   }
 
   function handleDelete() {
-    setDocs(prev => prev.filter(d => d.id !== confirm.docId))
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=delete_document') ───
+    setTimeout(() => {
+      setDocs(prev => prev.filter(d => d.id !== confirm.docId))
+      onToast('Документ удалён', 'error')
+    }, 300) // заменить на реальный fetch
+    // ──────────────────────────────────────────────────────────────────────────
     setConfirm(null)
-    onToast('Документ удалён', 'error')
   }
 
   function openModal() {
@@ -47,6 +72,8 @@ export default function AboutTab({ onToast }) {
     setErrors({})
     setModal(true)
   }
+
+  if (loading) return <Spinner text="Загружаем документы..." />
 
   return (
     <div>
@@ -101,7 +128,12 @@ export default function AboutTab({ onToast }) {
 
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setModal(false)}>Отмена</button>
-              <button className="btn btn-primary" onClick={handleAdd}>Добавить</button>
+              <button
+                className={`btn btn-primary ${saving ? 'btn-loading' : ''}`}
+                onClick={handleAdd}
+              >
+                {saving ? 'Добавление...' : 'Добавить'}
+              </button>
             </div>
           </div>
         </div>

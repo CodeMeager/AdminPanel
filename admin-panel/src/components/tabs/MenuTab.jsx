@@ -1,9 +1,23 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ConfirmModal from '../ConfirmModal'
+import Spinner from '../Spinner'
 
 // showWeight — показывать ли поле «Вес/объём» (для бизнес-ланча передаётся false)
 export default function MenuTab({ categories, initialItems, onToast, showWeight = true }) {
-  const [items, setItems] = useState(initialItems)
+  // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=get_menu_items') ───
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [items, setItems] = useState([])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setItems(initialItems)
+      setLoading(false)
+    }, 600) // заменить на реальный fetch
+    return () => clearTimeout(t)
+  }, [initialItems])
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState({})
@@ -38,31 +52,41 @@ export default function MenuTab({ categories, initialItems, onToast, showWeight 
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
 
-    if (modal.mode === 'add') {
-      setItems(prev => [...prev, {
-        id: Date.now(),
-        category_id: modal.categoryId,
-        name: form.name.trim(),
-        description: form.description.trim(),
-        price: Number(form.price),
-        weight: form.weight.trim(),
-      }])
-      onToast('Блюдо добавлено')
-    } else {
-      setItems(prev => prev.map(it =>
-        it.id === modal.item.id
-          ? { ...it, name: form.name.trim(), description: form.description.trim(), price: Number(form.price), weight: form.weight.trim() }
-          : it
-      ))
-      onToast('Блюдо сохранено')
-    }
-    setModal(null)
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=save_menu_item') ───
+    setSaving(true)
+    setTimeout(() => {
+      if (modal.mode === 'add') {
+        setItems(prev => [...prev, {
+          id: Date.now(),
+          category_id: modal.categoryId,
+          name: form.name.trim(),
+          description: form.description.trim(),
+          price: Number(form.price),
+          weight: form.weight.trim(),
+        }])
+        onToast('Блюдо добавлено')
+      } else {
+        setItems(prev => prev.map(it =>
+          it.id === modal.item.id
+            ? { ...it, name: form.name.trim(), description: form.description.trim(), price: Number(form.price), weight: form.weight.trim() }
+            : it
+        ))
+        onToast('Блюдо сохранено')
+      }
+      setSaving(false)
+      setModal(null)
+    }, 400) // заменить на реальный fetch
+    // ─────────────────────────────────────────────────────────────────────────────
   }
 
   function handleDelete() {
-    setItems(prev => prev.filter(it => it.id !== confirm.itemId))
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=delete_menu_item') ───
+    setTimeout(() => {
+      setItems(prev => prev.filter(it => it.id !== confirm.itemId))
+      onToast('Блюдо удалено', 'error')
+    }, 300) // заменить на реальный fetch
+    // ─────────────────────────────────────────────────────────────────────────────
     setConfirm(null)
-    onToast('Блюдо удалено', 'error')
   }
 
   function setField(key, value) {
@@ -71,6 +95,8 @@ export default function MenuTab({ categories, initialItems, onToast, showWeight 
   }
 
   const colSpan = showWeight ? 5 : 4
+
+  if (loading) return <Spinner text="Загружаем блюда..." />
 
   return (
     <div>
@@ -176,7 +202,12 @@ export default function MenuTab({ categories, initialItems, onToast, showWeight 
 
             <div className="modal-actions">
               <button className="btn btn-outline" onClick={() => setModal(null)}>Отмена</button>
-              <button className="btn btn-primary" onClick={handleSave}>Сохранить</button>
+              <button
+                className={`btn btn-primary ${saving ? 'btn-loading' : ''}`}
+                onClick={handleSave}
+              >
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
             </div>
           </div>
         </div>

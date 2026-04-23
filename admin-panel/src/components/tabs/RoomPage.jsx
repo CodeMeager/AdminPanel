@@ -1,23 +1,34 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { roomPages, equipmentInRoom, equipmentDisposable } from '../../data/mockData'
+import Spinner from '../Spinner'
 
 const MAX_PHOTOS = 12
 
 export default function RoomPage({ room, onBack, onToast }) {
-  const initial = roomPages[room.id] || {
-    room_id: room.id,
-    gallery: [],
-    preview_index: 0,
-    full_description: '',
-    bed_type: '',
-    equipment_in_room: [],
-    equipment_disposable: [],
-  }
+  // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=get_room_page') ───
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [data, setData] = useState(null)
 
-  const [data, setData] = useState(initial)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setData(roomPages[room.id] || {
+        room_id: room.id,
+        gallery: [],
+        preview_index: 0,
+        full_description: '',
+        bed_type: '',
+        equipment_in_room: [],
+        equipment_disposable: [],
+      })
+      setLoading(false)
+    }, 600) // заменить на реальный fetch
+    return () => clearTimeout(t)
+  }, [room.id])
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [errors, setErrors] = useState({})
 
-  // ── Галерея ──
   function handlePhotoUpload(e) {
     const files = Array.from(e.target.files)
     const remaining = MAX_PHOTOS - data.gallery.length
@@ -38,7 +49,6 @@ export default function RoomPage({ room, onBack, onToast }) {
     setData(d => ({ ...d, preview_index: idx }))
   }
 
-  // ── Чекбоксы оснащения ──
   function toggleEquip(list, item) {
     setData(d => ({
       ...d,
@@ -70,8 +80,24 @@ export default function RoomPage({ room, onBack, onToast }) {
   function handleSave() {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    onToast('Страница номера сохранена')
+
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=save_room_page') ───
+    setSaving(true)
+    setTimeout(() => {
+      onToast('Страница номера сохранена')
+      setSaving(false)
+    }, 500) // заменить на реальный fetch
+    // ──────────────────────────────────────────────────────────────────────────
   }
+
+  if (loading) return (
+    <div className="room-page">
+      <div className="room-page-back">
+        <button className="btn btn-outline" onClick={onBack}>← Назад к номерам</button>
+      </div>
+      <Spinner text="Загружаем страницу номера..." />
+    </div>
+  )
 
   return (
     <div className="room-page">
@@ -176,7 +202,12 @@ export default function RoomPage({ room, onBack, onToast }) {
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-        <button className="btn btn-primary" onClick={handleSave}>💾 Сохранить</button>
+        <button
+          className={`btn btn-primary ${saving ? 'btn-loading' : ''}`}
+          onClick={handleSave}
+        >
+          {saving ? 'Сохранение...' : '💾 Сохранить'}
+        </button>
         <button className="btn btn-outline" onClick={onBack}>Назад к номерам</button>
       </div>
     </div>

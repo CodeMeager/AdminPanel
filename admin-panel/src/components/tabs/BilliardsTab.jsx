@@ -1,9 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { billiardPrices } from '../../data/mockData'
+import Spinner from '../Spinner'
 
 export default function BilliardsTab({ onToast }) {
-  const [prices, setPrices] = useState(billiardPrices)
-  // editing: id ячейки, которую сейчас редактируют
+  // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=get_billiards') ───
+  const [loading, setLoading] = useState(true)
+  const [prices, setPrices] = useState([])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPrices(billiardPrices)
+      setLoading(false)
+    }, 500) // заменить на реальный fetch
+    return () => clearTimeout(t)
+  }, [])
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [editing, setEditing] = useState(null)
   const [draft, setDraft] = useState('')
 
@@ -17,8 +29,10 @@ export default function BilliardsTab({ onToast }) {
   function saveEdit(id) {
     const val = parseInt(draft, 10)
     if (!isNaN(val) && val >= 0) {
+      // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=save_billiard_price') ───
       setPrices(prev => prev.map(p => p.id === id ? { ...p, price: val } : p))
       onToast('Цена обновлена')
+      // ──────────────────────────────────────────────────────────────────────────
     }
     setEditing(null)
   }
@@ -27,6 +41,8 @@ export default function BilliardsTab({ onToast }) {
     if (e.key === 'Enter') saveEdit(id)
     if (e.key === 'Escape') setEditing(null)
   }
+
+  if (loading) return <Spinner text="Загружаем цены..." />
 
   return (
     <div>

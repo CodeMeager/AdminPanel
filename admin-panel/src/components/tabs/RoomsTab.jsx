@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ConfirmModal from '../ConfirmModal'
+import Spinner from '../Spinner'
 import { roomTypes, amenitiesList, rooms as initialRooms } from '../../data/mockData'
 
 function RoomModal({ room, onSave, onClose }) {
@@ -9,6 +10,7 @@ function RoomModal({ room, onSave, onClose }) {
   )
   const [photoPreview, setPhotoPreview] = useState(room?.photo || null)
   const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
 
   function setField(key, value) {
     setForm(f => ({ ...f, [key]: value }))
@@ -45,12 +47,19 @@ function RoomModal({ room, onSave, onClose }) {
   function handleSave() {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    onSave({
-      ...form,
-      count: Number(form.count),
-      area:  Number(form.area),
-      price: Number(form.price),
-    })
+
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=save_room') ───
+    setSaving(true)
+    setTimeout(() => {
+      onSave({
+        ...form,
+        count: Number(form.count),
+        area:  Number(form.area),
+        price: Number(form.price),
+      })
+      setSaving(false)
+    }, 400) // заменить на реальный fetch
+    // ──────────────────────────────────────────────────────────────────────────
   }
 
   return (
@@ -150,7 +159,12 @@ function RoomModal({ room, onSave, onClose }) {
 
         <div className="modal-actions">
           <button className="btn btn-outline" onClick={onClose}>Отмена</button>
-          <button className="btn btn-primary" onClick={handleSave}>Сохранить</button>
+          <button
+            className={`btn btn-primary ${saving ? 'btn-loading' : ''}`}
+            onClick={handleSave}
+          >
+            {saving ? 'Сохранение...' : 'Сохранить'}
+          </button>
         </div>
       </div>
     </div>
@@ -160,7 +174,19 @@ function RoomModal({ room, onSave, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function RoomsTab({ onToast, onOpenRoomPage }) {
-  const [rooms, setRooms] = useState(initialRooms)
+  // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=get_rooms') ───
+  const [loading, setLoading] = useState(true)
+  const [rooms, setRooms] = useState([])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setRooms(initialRooms)
+      setLoading(false)
+    }, 700) // заменить на реальный fetch
+    return () => clearTimeout(t)
+  }, [])
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
 
@@ -179,10 +205,16 @@ export default function RoomsTab({ onToast, onOpenRoomPage }) {
   }
 
   function handleDelete() {
-    setRooms(prev => prev.filter(r => r.id !== confirm.roomId))
+    // ─── LOADING_STATE: заменить на fetch('/admin/api.php?action=delete_room') ───
+    setTimeout(() => {
+      setRooms(prev => prev.filter(r => r.id !== confirm.roomId))
+      onToast('Номер удалён', 'error')
+    }, 300) // заменить на реальный fetch
+    // ──────────────────────────────────────────────────────────────────────────
     setConfirm(null)
-    onToast('Номер удалён', 'error')
   }
+
+  if (loading) return <Spinner text="Загружаем номера..." />
 
   return (
     <div>
