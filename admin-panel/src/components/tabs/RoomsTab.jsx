@@ -2,13 +2,18 @@ import React, { useState } from 'react'
 import ConfirmModal from '../ConfirmModal'
 import { roomTypes, amenitiesList, rooms as initialRooms } from '../../data/mockData'
 
-// Форма добавления / редактирования карточки номера
 function RoomModal({ room, onSave, onClose }) {
   const [form, setForm] = useState(room
     ? { ...room, amenities: [...(room.amenities || [])] }
     : { type: 'Стандарт', name: '', description: '', count: '', area: '', price: '', amenities: [], photo: null }
   )
   const [photoPreview, setPhotoPreview] = useState(room?.photo || null)
+  const [errors, setErrors] = useState({})
+
+  function setField(key, value) {
+    setForm(f => ({ ...f, [key]: value }))
+    if (errors[key]) setErrors(e => ({ ...e, [key]: undefined }))
+  }
 
   function toggleAmenity(a) {
     setForm(f => ({
@@ -23,15 +28,28 @@ function RoomModal({ room, onSave, onClose }) {
     const url = URL.createObjectURL(file)
     setPhotoPreview(url)
     setForm(f => ({ ...f, photo: url }))
+    setErrors(e => ({ ...e, photo: undefined }))
+  }
+
+  function validate() {
+    const e = {}
+    if (!form.name.trim())         e.name        = 'Введите название номера'
+    if (!form.description.trim())  e.description = 'Введите краткое описание'
+    if (!form.count || Number(form.count) <= 0) e.count = 'Укажите количество номеров'
+    if (!form.area  || Number(form.area)  <= 0) e.area  = 'Укажите площадь'
+    if (!form.price || Number(form.price) <= 0) e.price = 'Укажите цену'
+    if (!form.photo)               e.photo       = 'Загрузите фото номера'
+    return e
   }
 
   function handleSave() {
-    if (!form.name.trim()) return
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
     onSave({
       ...form,
-      count: Number(form.count) || 0,
-      area:  Number(form.area)  || 0,
-      price: Number(form.price) || 0,
+      count: Number(form.count),
+      area:  Number(form.area),
+      price: Number(form.price),
     })
   }
 
@@ -43,46 +61,81 @@ function RoomModal({ room, onSave, onClose }) {
 
         <div className="form-field">
           <label>Тип номера</label>
-          <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+          <select value={form.type} onChange={e => setField('type', e.target.value)}>
             {roomTypes.map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
+
         <div className="form-field">
-          <label>Название *</label>
-          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Напр: Стандарт одноместный" />
+          <label>Название <span className="required-mark">*</span></label>
+          <input
+            className={errors.name ? 'input-error' : ''}
+            value={form.name}
+            onChange={e => setField('name', e.target.value)}
+            placeholder="Напр: Стандарт одноместный"
+          />
+          {errors.name && <span className="field-error">{errors.name}</span>}
         </div>
+
         <div className="form-field">
-          <label>Краткое описание</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Пара предложений" />
+          <label>Краткое описание <span className="required-mark">*</span></label>
+          <textarea
+            className={errors.description ? 'input-error' : ''}
+            value={form.description}
+            onChange={e => setField('description', e.target.value)}
+            placeholder="Пара предложений"
+          />
+          {errors.description && <span className="field-error">{errors.description}</span>}
         </div>
+
         <div className="form-row">
           <div className="form-field">
-            <label>Кол-во номеров</label>
-            <input type="number" value={form.count} onChange={e => setForm(f => ({ ...f, count: e.target.value }))} min="0" />
+            <label>Кол-во номеров <span className="required-mark">*</span></label>
+            <input
+              type="number"
+              className={errors.count ? 'input-error' : ''}
+              value={form.count}
+              onChange={e => setField('count', e.target.value)}
+              min="1"
+            />
+            {errors.count && <span className="field-error">{errors.count}</span>}
           </div>
           <div className="form-field">
-            <label>Площадь м²</label>
-            <input type="number" value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} min="0" />
+            <label>Площадь м² <span className="required-mark">*</span></label>
+            <input
+              type="number"
+              className={errors.area ? 'input-error' : ''}
+              value={form.area}
+              onChange={e => setField('area', e.target.value)}
+              min="1"
+            />
+            {errors.area && <span className="field-error">{errors.area}</span>}
           </div>
           <div className="form-field">
-            <label>Цена ₽/сут</label>
-            <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} min="0" />
+            <label>Цена ₽/сут <span className="required-mark">*</span></label>
+            <input
+              type="number"
+              className={errors.price ? 'input-error' : ''}
+              value={form.price}
+              onChange={e => setField('price', e.target.value)}
+              min="1"
+            />
+            {errors.price && <span className="field-error">{errors.price}</span>}
           </div>
         </div>
 
-        {/* Фото */}
         <div className="form-field">
-          <label>Фото</label>
-          <label className="photo-upload-label">
+          <label>Фото <span className="required-mark">*</span></label>
+          <label className={`photo-upload-label ${errors.photo ? 'input-error' : ''}`}>
             {photoPreview
               ? <img src={photoPreview} className="photo-preview" alt="preview" />
               : <><span style={{ fontSize: 28 }}>📷</span><span>Нажмите для выбора фото</span></>
             }
             <input type="file" accept="image/*" onChange={handlePhoto} />
           </label>
+          {errors.photo && <span className="field-error">{errors.photo}</span>}
         </div>
 
-        {/* Плюшки */}
         <div className="form-field">
           <label>Удобства</label>
           <div className="checkbox-grid mt-8">
@@ -108,16 +161,8 @@ function RoomModal({ room, onSave, onClose }) {
 
 export default function RoomsTab({ onToast, onOpenRoomPage }) {
   const [rooms, setRooms] = useState(initialRooms)
-  const [modal, setModal] = useState(null)   // null | { mode: 'add'|'edit', room? }
+  const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
-
-  function openAdd() {
-    setModal({ mode: 'add' })
-  }
-
-  function openEdit(room) {
-    setModal({ mode: 'edit', room })
-  }
 
   function handleSave(formData) {
     if (modal.mode === 'add') {
@@ -125,7 +170,6 @@ export default function RoomsTab({ onToast, onOpenRoomPage }) {
       setRooms(prev => [...prev, newRoom])
       setModal(null)
       onToast('Номер добавлен')
-      // После добавления — открываем редактор страницы номера
       onOpenRoomPage(newRoom)
     } else {
       setRooms(prev => prev.map(r => r.id === modal.room.id ? { ...r, ...formData } : r))
@@ -144,7 +188,7 @@ export default function RoomsTab({ onToast, onOpenRoomPage }) {
     <div>
       <div className="section-header">
         <h2>Номера</h2>
-        <button className="btn btn-primary" onClick={openAdd}>+ Добавить номер</button>
+        <button className="btn btn-primary" onClick={() => setModal({ mode: 'add' })}>+ Добавить номер</button>
       </div>
 
       <div className="rooms-grid">
@@ -171,7 +215,7 @@ export default function RoomsTab({ onToast, onOpenRoomPage }) {
               <div className="room-card-price">{room.price.toLocaleString('ru')} ₽/сут</div>
             </div>
             <div className="room-card-actions">
-              <button className="btn btn-outline btn-sm" onClick={() => openEdit(room)}>✏️ Редактировать</button>
+              <button className="btn btn-outline btn-sm" onClick={() => setModal({ mode: 'edit', room })}>✏️ Редактировать</button>
               <button className="btn btn-outline btn-sm" onClick={() => onOpenRoomPage(room)}>📄 Страница</button>
               <button className="btn btn-icon" title="Удалить" onClick={() => setConfirm({ roomId: room.id })}>🗑️</button>
             </div>

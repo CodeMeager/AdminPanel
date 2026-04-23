@@ -542,6 +542,19 @@ input.field-input:focus { border-color: var(--primary); }
   border: 1px solid var(--border);
 }
 
+/* ─── ВАЛИДАЦИЯ ──────────────────────────────────────────────────────────────── */
+.input-error {
+  border-color: var(--danger) !important;
+  background: #fff5f5 !important;
+}
+.field-error {
+  display: block;
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.required-mark { color: var(--danger); margin-left: 2px; }
+
 /* ─── РАЗНЫЕ УТИЛИТЫ ─────────────────────────────────────────────────────────── */
 .text-muted { color: var(--muted); }
 .mt-8  { margin-top: 8px; }

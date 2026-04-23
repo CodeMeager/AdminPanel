@@ -84,7 +84,7 @@ export default function App() {
           <MenuTab categories={menuCategories} initialItems={menuItems} onToast={showToast} />
         )}
         {activeTab === 'lunch' && (
-          <MenuTab categories={lunchCategories} initialItems={lunchItems} onToast={showToast} />
+          <MenuTab categories={lunchCategories} initialItems={lunchItems} onToast={showToast} showWeight={false} />
         )}
         {activeTab === 'rooms' && (
           <RoomsTab

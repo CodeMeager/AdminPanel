@@ -4,7 +4,6 @@ import { roomPages, equipmentInRoom, equipmentDisposable } from '../../data/mock
 const MAX_PHOTOS = 12
 
 export default function RoomPage({ room, onBack, onToast }) {
-  // Берём сохранённые данные страницы или создаём пустые для нового номера
   const initial = roomPages[room.id] || {
     room_id: room.id,
     gallery: [],
@@ -16,6 +15,7 @@ export default function RoomPage({ room, onBack, onToast }) {
   }
 
   const [data, setData] = useState(initial)
+  const [errors, setErrors] = useState({})
 
   // ── Галерея ──
   function handlePhotoUpload(e) {
@@ -23,12 +23,12 @@ export default function RoomPage({ room, onBack, onToast }) {
     const remaining = MAX_PHOTOS - data.gallery.length
     const toAdd = files.slice(0, remaining).map(f => URL.createObjectURL(f))
     setData(d => ({ ...d, gallery: [...d.gallery, ...toAdd] }))
+    setErrors(e => ({ ...e, gallery: undefined }))
   }
 
   function removePhoto(idx) {
     setData(d => {
       const gallery = d.gallery.filter((_, i) => i !== idx)
-      // если удалили превью — сбрасываем на 0
       const preview_index = d.preview_index >= gallery.length ? 0 : d.preview_index
       return { ...d, gallery, preview_index }
     })
@@ -44,10 +44,32 @@ export default function RoomPage({ room, onBack, onToast }) {
       ...d,
       [list]: d[list].includes(item) ? d[list].filter(x => x !== item) : [...d[list], item],
     }))
+    setErrors(e => ({ ...e, [list]: undefined }))
+  }
+
+  function setTextField(key, value) {
+    setData(d => ({ ...d, [key]: value }))
+    if (errors[key]) setErrors(e => ({ ...e, [key]: undefined }))
+  }
+
+  function validate() {
+    const e = {}
+    if (data.gallery.length === 0)
+      e.gallery = 'Загрузите хотя бы одно фото'
+    if (!data.full_description.trim())
+      e.full_description = 'Введите описание номера'
+    if (!data.bed_type.trim())
+      e.bed_type = 'Введите тип кровати'
+    if (data.equipment_in_room.length === 0)
+      e.equipment_in_room = 'Отметьте хотя бы один пункт'
+    if (data.equipment_disposable.length === 0)
+      e.equipment_disposable = 'Отметьте хотя бы один пункт'
+    return e
   }
 
   function handleSave() {
-    // В будущем здесь — API-вызов. Пока просто показываем тост.
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
     onToast('Страница номера сохранена')
   }
 
@@ -60,7 +82,7 @@ export default function RoomPage({ room, onBack, onToast }) {
 
       {/* ── Галерея ── */}
       <div className="room-page-section">
-        <h3>Галерея (до {MAX_PHOTOS} фото)</h3>
+        <h3>Галерея (до {MAX_PHOTOS} фото) <span className="required-mark">*</span></h3>
         <p className="gallery-hint">Нажмите на фото, чтобы сделать его превью (выделено рамкой)</p>
         <div className="gallery-grid">
           {data.gallery.map((src, idx) => (
@@ -83,40 +105,43 @@ export default function RoomPage({ room, onBack, onToast }) {
           )}
         </div>
         {data.gallery.length < MAX_PHOTOS && (
-          <label className="upload-btn-label">
+          <label className="upload-btn-label mt-8">
             📷 Загрузить фото
             <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
           </label>
         )}
+        {errors.gallery && <span className="field-error mt-8">{errors.gallery}</span>}
       </div>
 
       {/* ── Описание ── */}
       <div className="room-page-section">
-        <h3>Описание номера</h3>
+        <h3>Описание номера <span className="required-mark">*</span></h3>
         <textarea
-          className="field-input"
+          className={`field-input ${errors.full_description ? 'input-error' : ''}`}
           rows={5}
           value={data.full_description}
-          onChange={e => setData(d => ({ ...d, full_description: e.target.value }))}
+          onChange={e => setTextField('full_description', e.target.value)}
           placeholder="Подробное описание номера..."
         />
+        {errors.full_description && <span className="field-error">{errors.full_description}</span>}
       </div>
 
       {/* ── Тип кровати ── */}
       <div className="room-page-section">
-        <h3>Тип кровати</h3>
+        <h3>Тип кровати <span className="required-mark">*</span></h3>
         <input
-          className="field-input"
+          className={`field-input ${errors.bed_type ? 'input-error' : ''}`}
           value={data.bed_type}
-          onChange={e => setData(d => ({ ...d, bed_type: e.target.value }))}
+          onChange={e => setTextField('bed_type', e.target.value)}
           placeholder="Напр: King-size, 2-спальная..."
           style={{ maxWidth: 320 }}
         />
+        {errors.bed_type && <span className="field-error">{errors.bed_type}</span>}
       </div>
 
-      {/* ── Оснащение ── */}
+      {/* ── Оснащение: В номере ── */}
       <div className="room-page-section">
-        <h3>Оснащение: В номере</h3>
+        <h3>Оснащение: В номере <span className="required-mark">*</span></h3>
         <div className="checkbox-grid">
           {equipmentInRoom.map(item => (
             <label key={item} className="checkbox-item">
@@ -129,10 +154,12 @@ export default function RoomPage({ room, onBack, onToast }) {
             </label>
           ))}
         </div>
+        {errors.equipment_in_room && <span className="field-error mt-8">{errors.equipment_in_room}</span>}
       </div>
 
+      {/* ── Оснащение: Одноразовая продукция ── */}
       <div className="room-page-section">
-        <h3>Оснащение: Одноразовая продукция</h3>
+        <h3>Оснащение: Одноразовая продукция <span className="required-mark">*</span></h3>
         <div className="checkbox-grid">
           {equipmentDisposable.map(item => (
             <label key={item} className="checkbox-item">
@@ -145,9 +172,9 @@ export default function RoomPage({ room, onBack, onToast }) {
             </label>
           ))}
         </div>
+        {errors.equipment_disposable && <span className="field-error mt-8">{errors.equipment_disposable}</span>}
       </div>
 
-      {/* ── Кнопки ── */}
       <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
         <button className="btn btn-primary" onClick={handleSave}>💾 Сохранить</button>
         <button className="btn btn-outline" onClick={onBack}>Назад к номерам</button>
